@@ -1,28 +1,53 @@
-name: Fix mobile menu
+name: Upgrade MY BRAND BOX UI
 on:
   push:
     branches: [main]
 permissions:
   contents: write
 jobs:
-  fix:
+  upgrade:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch mobile menu
+      - name: Patch site UI
         run: |
           python - <<'PY'
           p='index.html'
           s=open(p,encoding='utf-8').read()
-          css='.nav .links.show{display:flex;position:absolute;top:78px;left:0;right:0;flex-direction:column;gap:0;padding:8px;background:#fffaf4f7;border:1px solid var(--line);border-radius:17px;box-shadow:0 16px 35px #28191218;backdrop-filter:blur(18px)}.nav .links.show a{padding:15px 17px;font-size:11px}'
-          s=s.replace('@media(max-width:800px){.links,.cta{display:none}', '@media(max-width:800px){.links,.cta{display:none}'+css, 1)
-          s=s.replace("document.querySelector('.menu').onclick=()=>document.querySelector('.links').classList.toggle('show')", "const menu=document.querySelector('.menu'),links=document.querySelector('.links');menu.onclick=()=>links.classList.toggle('show');links.querySelectorAll('a').forEach(a=>a.onclick=()=>links.classList.remove('show'))", 1)
+
+          # Animated ticker: continuous horizontal marquee with repeated content.
+          old='<div class="ticker">CORPORATE GIFTING <span>✦</span> PERSONALIZED GIFTS <span>✦</span> CUSTOM PRINTING <span>✦</span> MADE IN PUNE</div>'
+          new='<div class="ticker" aria-label="MY BRAND BOX services"><div class="tickerTrack"><span>CORPORATE GIFTING</span><b>✦</b><span>PERSONALIZED GIFTS</span><b>✦</b><span>CUSTOM PRINTING</span><b>✦</b><span>MADE IN PUNE</span><b>✦</b><span>EMPLOYEE KITS</span><b>✦</b><span>CORPORATE GIFTING</span><b>✦</b><span>PERSONALIZED GIFTS</span><b>✦</b><span>CUSTOM PRINTING</span><b>✦</b><span>MADE IN PUNE</span><b>✦</b><span>EMPLOYEE KITS</span><b>✦</b></div></div>'
+          if old in s:
+              s=s.replace(old,new,1)
+
+          # Premium motion + interactive polish.
+          css='''
+          .ticker{position:relative;text-align:left;overflow:hidden}.tickerTrack{display:inline-flex;align-items:center;gap:25px;min-width:max-content;animation:tickerMove 24s linear infinite}.tickerTrack span{color:#fff5eb;margin:0}.tickerTrack b{color:#d58a59;font-size:12px}.ticker:hover .tickerTrack{animation-play-state:paused}@keyframes tickerMove{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+          .service,.product,.panel,.contactCard,.step{transition:transform .35s ease,box-shadow .35s ease,border-color .35s ease}.service:hover,.product:hover,.panel:hover,.contactCard:hover,.step:hover{transform:translateY(-7px);box-shadow:0 28px 70px #32201622;border-color:#b8664355}.btn,.chip,.cta,.menu{transition:transform .2s ease,box-shadow .2s ease,background .2s ease}.btn:hover,.chip:hover,.cta:hover{transform:translateY(-2px)}.products{cursor:grab;scroll-snap-type:x proximity}.product{scroll-snap-align:start}.products:active{cursor:grabbing}.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}.reveal.visible{opacity:1;transform:none}
+          .location{background:var(--paper);border:1px solid var(--line);border-radius:30px;padding:28px;box-shadow:var(--shadow)}.locationGrid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px;align-items:stretch}.locationInfo{display:flex;flex-direction:column;justify-content:center;padding:10px 8px}.locationInfo h3{font:500 40px/1.05 Playfair Display,serif;margin:10px 0 12px}.locationInfo p{margin:0 0 20px}.locationMeta{display:grid;gap:11px;margin:5px 0 23px}.locationMeta div{padding:13px 15px;background:#f7f0e7;border-radius:14px;font-size:11px;color:var(--muted)}.mapFrame{min-height:330px;border:0;border-radius:22px;overflow:hidden;box-shadow:0 15px 45px #32201618;background:#e9ded1}.mapFrame iframe{width:100%;height:100%;min-height:330px;border:0}.directions{align-self:flex-start}.wa{box-shadow:0 12px 30px #198c4b44;transition:transform .2s ease}.wa:hover{transform:scale(1.08)}
+          @media(max-width:800px){.location{padding:17px}.locationGrid{grid-template-columns:1fr}.mapFrame,.mapFrame iframe{min-height:280px}.locationInfo h3{font-size:34px}.tickerTrack{animation-duration:18s}}
+          '''
+          marker='</style></head>'
+          if '.tickerTrack{' not in s:
+              s=s.replace(marker,css+'</style></head>',1)
+
+          # Google Maps section at the end of the site, just before footer.
+          if 'id="location"' not in s:
+              location='''<section id="location" class="sand"><div class="wrap"><div class="top"><div><div class="kicker">07 / VISIT US</div><h2 class="title">Come say<br><em>hello.</em></h2></div><p class="lead">Find MY BRAND BOX and come talk gifting, branding and ideas with us.</p></div><div class="location"><div class="locationGrid"><div class="locationInfo"><div class="kicker">MY BRAND BOX</div><h3>Rahatani, Pune.</h3><p>Corporate gifting · Personalized gifts · Custom printing</p><div class="locationMeta"><div>📍 Rahatani, Pune, Maharashtra, India</div><div>🕘 Mon – Sat · 10:00 AM – 7:00 PM</div><div>💬 WhatsApp · +91 77579 04493</div></div><a class="btn dark directions" target="_blank" href="https://www.google.com/maps/search/?api=1&query=MY%20BRAND%20BOX%20Rahatani%20Pune">GET DIRECTIONS ↗</a></div><div class="mapFrame"><iframe title="MY BRAND BOX on Google Maps" loading="lazy" src="https://www.google.com/maps?q=MY%20BRAND%20BOX%20Rahatani%20Pune&output=embed"></iframe></div></div></div></div></section>'''
+              s=s.replace('</main>',location+'</main>',1)
+
+          # Scroll-in reveals and drag-to-scroll for the collection.
+          js='''<script>(()=>{const els=document.querySelectorAll('.service,.product,.panel,.contactCard,.step,.finder,.location');els.forEach(e=>e.classList.add('reveal'));const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target)}}),{threshold:.12});els.forEach(e=>io.observe(e));const rail=document.querySelector('.products');if(rail){let down=false,start=0,left=0;rail.addEventListener('pointerdown',e=>{down=true;start=e.clientX;left=rail.scrollLeft;rail.setPointerCapture(e.pointerId)});rail.addEventListener('pointermove',e=>{if(down)rail.scrollLeft=left-(e.clientX-start)*1.15});rail.addEventListener('pointerup',()=>down=false);rail.addEventListener('pointercancel',()=>down=false)}})();</script>'''
+          if "IntersectionObserver" not in s:
+              s=s.replace('</body>',js+'</body>',1)
+
           open(p,'w',encoding='utf-8').write(s)
           PY
-      - name: Commit fix
+      - name: Commit upgrade
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Fix mobile navigation dropdown'
+          git diff --cached --quiet || git commit -m 'Upgrade interactive UI, marquee and Google Maps'
           git push
