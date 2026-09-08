@@ -1,0 +1,28 @@
+name: Fix mobile menu
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch mobile menu
+        run: |
+          python - <<'PY'
+          p='index.html'
+          s=open(p,encoding='utf-8').read()
+          css='.nav .links.show{display:flex;position:absolute;top:78px;left:0;right:0;flex-direction:column;gap:0;padding:8px;background:#fffaf4f7;border:1px solid var(--line);border-radius:17px;box-shadow:0 16px 35px #28191218;backdrop-filter:blur(18px)}.nav .links.show a{padding:15px 17px;font-size:11px}'
+          s=s.replace('@media(max-width:800px){.links,.cta{display:none}', '@media(max-width:800px){.links,.cta{display:none}'+css, 1)
+          s=s.replace("document.querySelector('.menu').onclick=()=>document.querySelector('.links').classList.toggle('show')", "const menu=document.querySelector('.menu'),links=document.querySelector('.links');menu.onclick=()=>links.classList.toggle('show');links.querySelectorAll('a').forEach(a=>a.onclick=()=>links.classList.remove('show'))", 1)
+          open(p,'w',encoding='utf-8').write(s)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Fix mobile navigation dropdown'
+          git push
